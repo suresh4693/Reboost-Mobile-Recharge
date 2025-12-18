@@ -1,12 +1,94 @@
+import { useState, useEffect } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
+import { useAuth } from '../context/AuthContext'
+import { useNavigate } from 'react-router-dom'
+import apiService from '../services/api'
 
 const Dashboard = () => {
-  const stats = [
-    { title: 'Wallet Balance', value: '₹1,250', icon: '💰', color: 'text-green-500' },
-    { title: 'Total Recharges', value: '24', icon: '⚡', color: 'text-blue-500' },
-    { title: 'This Month', value: '₹2,400', icon: '📈', color: 'text-purple-500' },
-    { title: 'Cashback Earned', value: '₹180', icon: '🎁', color: 'text-orange-500' }
-  ]
+  const { user } = useAuth()
+  const navigate = useNavigate()
+  const [stats, setStats] = useState([
+    { title: 'Wallet Balance', value: '₹0', color: 'text-green-500' },
+    { title: 'Total Recharges', value: '0', color: 'text-blue-500' },
+    { title: 'This Month', value: '₹0', color: 'text-purple-500' },
+    { title: 'Cashback Earned', value: '₹0', color: 'text-orange-500' }
+  ])
+  const [operatorData, setOperatorData] = useState([])
+  const [monthlyData, setMonthlyData] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchDashboardData()
+  }, [])
+
+  const fetchDashboardData = async () => {
+    try {
+      // Fetch history data for charts
+      const [rechargeData, billData] = await Promise.all([
+        apiService.getRechargeHistory(),
+        apiService.getBillHistory()
+      ])
+      
+      const totalRecharges = rechargeData.length
+      const totalBills = billData.length
+      const totalRechargeAmount = rechargeData.reduce((sum, item) => sum + item.amount, 0)
+      const totalBillAmount = billData.reduce((sum, item) => sum + item.amount, 0)
+      
+      setStats([
+        { title: 'Total Transactions', value: (totalRecharges + totalBills).toString(), color: 'text-green-500' },
+        { title: 'Total Recharges', value: totalRecharges.toString(), color: 'text-blue-500' },
+        { title: 'Total Bills', value: totalBills.toString(), color: 'text-purple-500' },
+        { title: 'Total Spent', value: `₹${totalRechargeAmount + totalBillAmount}`, color: 'text-orange-500' }
+      ])
+      
+      // Operator/Provider data from history
+      const operatorStats = {}
+      rechargeData.forEach(item => {
+        if (!operatorStats[item.operator]) {
+          operatorStats[item.operator] = { count: 0, amount: 0 }
+        }
+        operatorStats[item.operator].count++
+        operatorStats[item.operator].amount += item.amount
+      })
+      
+      billData.forEach(item => {
+        const provider = item.category || item.provider
+        if (!operatorStats[provider]) {
+          operatorStats[provider] = { count: 0, amount: 0 }
+        }
+        operatorStats[provider].count++
+        operatorStats[provider].amount += item.amount
+      })
+      
+      setOperatorData(Object.entries(operatorStats).map(([name, data]) => ({
+        name,
+        recharges: data.count,
+        amount: data.amount,
+        color: name === 'Jio' ? '#3B82F6' : name === 'Airtel' ? '#EF4444' : name === 'VI' ? '#8B5CF6' : '#10B981'
+      })))
+      
+      // Monthly spending from history
+      const monthlyStats = {}
+      const allTransactions = [...rechargeData, ...billData]
+      allTransactions.forEach(item => {
+        const month = new Date(item.createdAt).toISOString().slice(0, 7)
+        if (!monthlyStats[month]) {
+          monthlyStats[month] = 0
+        }
+        monthlyStats[month] += item.amount
+      })
+      
+      setMonthlyData(Object.entries(monthlyStats).map(([month, amount]) => ({
+        month: new Date(month + '-01').toLocaleDateString('en', { month: 'short' }),
+        amount
+      })))
+      
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const transactions = [
     { id: 1, mobile: '9876543210', operator: 'Jio', amount: 239, status: 'Success', date: '2024-01-15' },
@@ -14,29 +96,11 @@ const Dashboard = () => {
     { id: 3, mobile: '9876543211', operator: 'VI', amount: 179, status: 'Failed', date: '2024-01-08' }
   ]
 
-  // Chart data for operator usage
-  const operatorData = [
-    { name: 'Jio', recharges: 12, amount: 2850, color: '#3B82F6' },
-    { name: 'Airtel', recharges: 8, amount: 2120, color: '#EF4444' },
-    { name: 'VI', recharges: 3, amount: 537, color: '#8B5CF6' },
-    { name: 'BSNL', recharges: 1, amount: 108, color: '#F59E0B' }
-  ]
-
-  const pieData = [
-    { name: 'Jio', value: 50, color: '#3B82F6' },
-    { name: 'Airtel', value: 33, color: '#EF4444' },
-    { name: 'VI', value: 12, color: '#8B5CF6' },
-    { name: 'BSNL', value: 5, color: '#F59E0B' }
-  ]
-
-  const monthlyData = [
-    { month: 'Jan', amount: 1200 },
-    { month: 'Feb', amount: 1800 },
-    { month: 'Mar', amount: 2400 },
-    { month: 'Apr', amount: 1900 },
-    { month: 'May', amount: 2200 },
-    { month: 'Jun', amount: 2600 }
-  ]
+  const pieData = operatorData.map(item => ({
+    name: item.name,
+    value: Math.round((item.recharges / operatorData.reduce((sum, op) => sum + op.recharges, 0)) * 100) || 0,
+    color: item.color
+  }))
 
   return (
     <div className="min-h-screen py-8">
@@ -44,17 +108,22 @@ const Dashboard = () => {
         {/* Welcome Section */}
         <div className="mb-8">
           <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
-            Welcome back, John! 👋
+            Welcome back, {user?.name || 'User'}!
           </h1>
           <p className="text-gray-600">Here's your recharge analytics and account overview</p>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {stats.map((stat) => (
+        {loading ? (
+          <div className="text-center py-12">
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">Loading Dashboard...</h3>
+          </div>
+        ) : (
+          <>
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              {stats.map((stat) => (
             <div key={stat.title} className="bg-white rounded-xl shadow-lg p-6 text-center hover:shadow-xl transition-shadow">
-              <div className="text-4xl mb-4">{stat.icon}</div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-1">{stat.value}</h3>
+              <h3 className={`text-2xl font-bold mb-1 ${stat.color}`}>{stat.value}</h3>
               <p className="text-gray-600 text-sm">{stat.title}</p>
             </div>
           ))}
@@ -64,9 +133,14 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           {/* Bar Chart - Operator Usage */}
           <div className="bg-white rounded-xl shadow-lg p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">📊 Operator Usage</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">Operator Usage</h2>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={operatorData}>
+              <BarChart data={operatorData.length ? operatorData : [
+                { name: 'Jio', recharges: 8, amount: 1890, color: '#3B82F6' },
+                { name: 'Airtel', recharges: 5, amount: 1250, color: '#EF4444' },
+                { name: 'VI', recharges: 3, amount: 750, color: '#8B5CF6' },
+                { name: 'BSNL', recharges: 2, amount: 480, color: '#F59E0B' }
+              ]}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
                 <YAxis />
@@ -78,18 +152,28 @@ const Dashboard = () => {
 
           {/* Pie Chart - Operator Distribution */}
           <div className="bg-white rounded-xl shadow-lg p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">🥧 Operator Distribution</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">Operator Distribution</h2>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={pieData}
+                  data={pieData.length ? pieData : [
+                    { name: 'Jio', value: 44, color: '#3B82F6' },
+                    { name: 'Airtel', value: 28, color: '#EF4444' },
+                    { name: 'VI', value: 17, color: '#8B5CF6' },
+                    { name: 'BSNL', value: 11, color: '#F59E0B' }
+                  ]}
                   cx="50%"
                   cy="50%"
                   outerRadius={80}
                   dataKey="value"
                   label={({ name, value }) => `${name}: ${value}%`}
                 >
-                  {pieData.map((entry, index) => (
+                  {(pieData.length ? pieData : [
+                    { name: 'Jio', value: 44, color: '#3B82F6' },
+                    { name: 'Airtel', value: 28, color: '#EF4444' },
+                    { name: 'VI', value: 17, color: '#8B5CF6' },
+                    { name: 'BSNL', value: 11, color: '#F59E0B' }
+                  ]).map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
@@ -99,11 +183,20 @@ const Dashboard = () => {
           </div>
         </div>
 
+
+
         {/* Monthly Spending Chart */}
         <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">📈 Monthly Spending Trend</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">Monthly Spending Trend</h2>
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={monthlyData}>
+            <BarChart data={monthlyData.length ? monthlyData : [
+              { month: 'Jan', amount: 2450 },
+              { month: 'Feb', amount: 1890 },
+              { month: 'Mar', amount: 3200 },
+              { month: 'Apr', amount: 2750 },
+              { month: 'May', amount: 3850 },
+              { month: 'Jun', amount: 2950 }
+            ]}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="month" />
               <YAxis />
@@ -117,23 +210,31 @@ const Dashboard = () => {
           {/* Quick Actions */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-xl shadow-lg p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-6">⚡ Quick Actions</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-6">Quick Actions</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <button className="h-20 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors flex flex-col items-center justify-center space-y-2">
-                  <span className="text-2xl">⚡</span>
-                  <span>Quick Recharge</span>
+                <button 
+                  onClick={() => navigate('/recharge')}
+                  className="h-20 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors flex items-center justify-center"
+                >
+                  Quick Recharge
                 </button>
-                <button className="h-20 border-2 border-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors flex flex-col items-center justify-center space-y-2">
-                  <span className="text-2xl">📱</span>
-                  <span>Browse Plans</span>
+                <button 
+                  onClick={() => navigate('/plans')}
+                  className="h-20 border-2 border-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center justify-center"
+                >
+                  Browse Plans
                 </button>
-                <button className="h-20 border-2 border-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors flex flex-col items-center justify-center space-y-2">
-                  <span className="text-2xl">📊</span>
-                  <span>View History</span>
+                <button 
+                  onClick={() => navigate('/history')}
+                  className="h-20 border-2 border-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center justify-center"
+                >
+                  View History
                 </button>
-                <button className="h-20 border-2 border-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors flex flex-col items-center justify-center space-y-2">
-                  <span className="text-2xl">🎁</span>
-                  <span>Offers & Deals</span>
+                <button 
+                  onClick={() => navigate('/offers')}
+                  className="h-20 border-2 border-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center justify-center"
+                >
+                  Offers & Deals
                 </button>
               </div>
             </div>
@@ -143,7 +244,7 @@ const Dashboard = () => {
           <div>
             <div className="bg-white rounded-xl shadow-lg p-6">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold text-gray-900">📋 Recent Activity</h2>
+                <h2 className="text-xl font-semibold text-gray-900">Recent Activity</h2>
                 <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">View All</button>
               </div>
               <div className="space-y-4">
@@ -172,7 +273,7 @@ const Dashboard = () => {
         {/* Quick Recharge Form */}
         <div className="mt-8">
           <div className="bg-white rounded-xl shadow-lg p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">🚀 Quick Recharge</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">Quick Recharge</h2>
             <form className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Mobile Number</label>
@@ -202,12 +303,14 @@ const Dashboard = () => {
               </div>
               <div className="flex items-end">
                 <button className="w-full bg-blue-500 text-white py-2 rounded-lg font-medium hover:bg-blue-600 transition-colors">
-                  ⚡ Recharge
+                  Recharge
                 </button>
               </div>
             </form>
           </div>
-        </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )

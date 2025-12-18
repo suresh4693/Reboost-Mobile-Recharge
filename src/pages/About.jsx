@@ -50,7 +50,7 @@ const About = () => {
         {/* Header */}
         <div className="text-center mb-16">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            About <span className="bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">ReBoost</span>
+            About <span className="bg-gradient-to-r from-gray-600 to-gray-800 bg-clip-text text-transparent">ReBoost</span>
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
             We're on a mission to revolutionize mobile recharge in India with 
@@ -131,7 +131,7 @@ const About = () => {
                   <div className="text-6xl hidden">{member.fallback}</div>
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-1">{member.name}</h3>
-                <p className="text-blue-600 font-medium mb-3">{member.role}</p>
+                <p className="text-gray-700 font-medium mb-3">{member.role}</p>
                 <p className="text-gray-600 text-sm">{member.description}</p>
               </div>
             ))}
@@ -148,7 +148,7 @@ const About = () => {
           <div className="space-y-8">
             {timeline.map((milestone) => (
               <div key={milestone.year} className="flex items-center space-x-6">
-                <div className="flex-shrink-0 w-16 h-16 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold">
+                <div className="flex-shrink-0 w-16 h-16 bg-gray-600 text-white rounded-full flex items-center justify-center font-bold">
                   {milestone.year}
                 </div>
                 <div>
@@ -174,25 +174,25 @@ const About = () => {
             <div className="bg-white rounded-xl shadow-lg p-6 text-center hover:shadow-xl transition-shadow">
               <div className="text-4xl mb-4">📧</div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Email Us</h3>
-              <p className="text-blue-600 font-medium mb-1">support@reboost.com</p>
+              <p className="text-gray-700 font-medium mb-1">support@reboost.com</p>
               <p className="text-gray-600 text-sm">Send us an email anytime</p>
             </div>
             <div className="bg-white rounded-xl shadow-lg p-6 text-center hover:shadow-xl transition-shadow">
               <div className="text-4xl mb-4">📞</div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Call Us</h3>
-              <p className="text-blue-600 font-medium mb-1">1800-123-RECHARGE</p>
+              <p className="text-gray-700 font-medium mb-1">1800-123-RECHARGE</p>
               <p className="text-gray-600 text-sm">24/7 customer support</p>
             </div>
             <div className="bg-white rounded-xl shadow-lg p-6 text-center hover:shadow-xl transition-shadow">
               <div className="text-4xl mb-4">📍</div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Visit Us</h3>
-              <p className="text-blue-600 font-medium mb-1">Mumbai, Maharashtra</p>
+              <p className="text-gray-700 font-medium mb-1">Mumbai, Maharashtra</p>
               <p className="text-gray-600 text-sm">Our headquarters</p>
             </div>
             <div className="bg-white rounded-xl shadow-lg p-6 text-center hover:shadow-xl transition-shadow">
               <div className="text-4xl mb-4">🕒</div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Working Hours</h3>
-              <p className="text-blue-600 font-medium mb-1">24/7 Available</p>
+              <p className="text-gray-700 font-medium mb-1">24/7 Available</p>
               <p className="text-gray-600 text-sm">Always here to help</p>
             </div>
           </div>
@@ -200,16 +200,16 @@ const About = () => {
 
         {/* CTA */}
         <div className="text-center">
-          <div className="bg-gradient-to-r from-blue-500 to-green-500 text-white rounded-xl shadow-lg p-8">
+          <div className="bg-gradient-to-r from-gray-700 to-gray-900 text-white rounded-xl shadow-lg p-8">
             <h2 className="text-3xl font-bold mb-4">Join Our Journey</h2>
             <p className="text-xl mb-8 opacity-90">
               Be part of India's fastest-growing recharge platform
             </p>
             <div className="space-x-4">
-              <button className="bg-white text-blue-600 px-8 py-3 rounded-lg font-medium hover:bg-gray-100 transition-colors">
+              <button className="bg-white text-gray-700 px-8 py-3 rounded-lg font-medium hover:bg-gray-100 transition-colors">
                 Start Recharging
               </button>
-              <button className="border-2 border-white text-white px-8 py-3 rounded-lg font-medium hover:bg-white hover:text-blue-600 transition-colors">
+              <button className="border-2 border-white text-white px-8 py-3 rounded-lg font-medium hover:bg-white hover:text-gray-700 transition-colors">
                 Email Us
               </button>
             </div>

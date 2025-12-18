@@ -1,18 +1,47 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
+import apiService from '../services/api'
 
 const Bills = () => {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [selectedCategory, setSelectedCategory] = useState('All')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedProvider, setSelectedProvider] = useState(null)
+  const [recentBills, setRecentBills] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [paymentLoading, setPaymentLoading] = useState(false)
+
+  useEffect(() => {
+    if (user) {
+      fetchBillHistory()
+    }
+  }, [user])
+
+  const fetchBillHistory = async () => {
+    try {
+      const data = await apiService.getBillHistory()
+      setRecentBills(data.slice(0, 3)) // Show only recent 3 bills
+    } catch (error) {
+      console.error('Error fetching bill history:', error)
+      setRecentBills([])
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handlePayBill = (plan, category) => {
+    if (!user) {
+      navigate('/login')
+      return
+    }
+
     navigate('/recharge', { 
       state: { 
-        selectedPlan: plan, 
-        billPayment: true, 
-        category: category 
+        selectedPlan: plan,
+        billPayment: true,
+        category: category
       } 
     })
   }
@@ -21,7 +50,6 @@ const Bills = () => {
     { 
       id: 1, 
       name: 'Electricity', 
-      icon: '💡', 
       color: 'from-yellow-500 to-orange-500', 
       logo: 'https://cdn-icons-png.flaticon.com/512/1040/1040241.png',
       providers: [
@@ -33,7 +61,6 @@ const Bills = () => {
     { 
       id: 2, 
       name: 'Gas', 
-      icon: '🔥', 
       color: 'from-red-500 to-pink-500', 
       logo: 'https://cdn-icons-png.flaticon.com/512/2917/2917995.png',
       providers: [
@@ -45,7 +72,6 @@ const Bills = () => {
     { 
       id: 3, 
       name: 'Water', 
-      icon: '💧', 
       color: 'from-blue-500 to-cyan-500', 
       logo: 'https://cdn-icons-png.flaticon.com/512/2917/2917641.png',
       providers: [
@@ -56,7 +82,6 @@ const Bills = () => {
     { 
       id: 4, 
       name: 'DTH/Cable', 
-      icon: '📺', 
       color: 'from-purple-500 to-indigo-500', 
       logo: 'https://cdn-icons-png.flaticon.com/512/3039/3039393.png',
       providers: [
@@ -68,7 +93,6 @@ const Bills = () => {
     { 
       id: 5, 
       name: 'Internet', 
-      icon: '🌐', 
       color: 'from-green-500 to-teal-500', 
       logo: 'https://cdn-icons-png.flaticon.com/512/1183/1183672.png',
       providers: [
@@ -80,7 +104,6 @@ const Bills = () => {
     { 
       id: 6, 
       name: 'Insurance', 
-      icon: '🛡️', 
       color: 'from-gray-500 to-slate-500', 
       logo: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png',
       providers: [
@@ -90,11 +113,7 @@ const Bills = () => {
     }
   ]
 
-  const recentBills = [
-    { id: 1, provider: 'MSEB', category: 'Electricity', amount: 1250, dueDate: '2024-02-15', status: 'pending' },
-    { id: 2, provider: 'Airtel DTH', category: 'DTH/Cable', amount: 350, dueDate: '2024-02-10', status: 'paid' },
-    { id: 3, provider: 'Jio Fiber', category: 'Internet', amount: 699, dueDate: '2024-02-20', status: 'pending' }
-  ]
+
 
   const filteredCategories = billCategories.filter(category => {
     const categoryMatch = selectedCategory === 'All' || category.name === selectedCategory
@@ -104,16 +123,15 @@ const Bills = () => {
   })
 
   return (
-    <div className="min-h-screen py-8">
+    <div className="min-h-screen py-8 bg-gradient-to-br from-blue-50 via-white to-green-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-12 bg-gradient-to-br from-blue-50 via-white to-green-50 py-16 rounded-xl">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            Bill{' '}
-            <span className="bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">Payments</span>
+            Quick Bill Payment
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Pay all your utility bills in one place. Fast, secure, and convenient.
+            Set up auto-pay for your regular bills and never miss a payment
           </p>
         </div>
 
@@ -122,7 +140,7 @@ const Bills = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">
-                🔍 Search Bills
+                Search Bills
               </label>
               <input
                 type="text"
@@ -134,7 +152,7 @@ const Bills = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">
-                📂 Filter by Category
+                Filter by Category
               </label>
               <select
                 value={selectedCategory}
@@ -151,38 +169,39 @@ const Bills = () => {
         </div>
 
         {/* Recent Bills */}
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-            <span className="mr-2">📋</span>
-            Recent Bills
-          </h2>
-          <div className="space-y-4">
-            {recentBills.map(bill => (
-              <div key={bill.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-green-500 rounded-full flex items-center justify-center text-white font-bold">
-                    {bill.provider.charAt(0)}
+        {!loading && recentBills.length > 0 && (
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">
+              Recent Bills
+            </h2>
+            <div className="space-y-4">
+              {recentBills.map(bill => (
+                <div key={bill._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-green-500 rounded-full flex items-center justify-center text-white font-bold">
+                      {bill.provider.charAt(0)}
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">{bill.provider}</h3>
+                      <p className="text-sm text-gray-600">{bill.category}</p>
+                      <p className="text-xs text-gray-500">Date: {new Date(bill.createdAt).toLocaleDateString()}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900">{bill.provider}</h3>
-                    <p className="text-sm text-gray-600">{bill.category}</p>
-                    <p className="text-xs text-gray-500">Due: {bill.dueDate}</p>
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-gray-900">₹{bill.amount}</p>
+                    <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${
+                      bill.status === 'success' 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {bill.status === 'success' ? 'Paid' : 'Pending'}
+                    </span>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-lg font-bold text-gray-900">₹{bill.amount}</p>
-                  <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${
-                    bill.status === 'paid' 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {bill.status === 'paid' ? '✅ Paid' : '⏰ Pending'}
-                  </span>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Bill Categories */}
         {!selectedProvider ? (
@@ -200,7 +219,6 @@ const Bills = () => {
                     }}
                   />
                   <div className={`w-16 h-16 bg-gradient-to-r ${category.color} rounded-full items-center justify-center text-2xl mx-auto hidden`}>
-                    {category.icon}
                   </div>
                 </div>
                 
@@ -224,7 +242,7 @@ const Bills = () => {
                   onClick={() => setSelectedProvider(category)}
                   className="w-full bg-blue-500 text-white py-3 rounded-lg font-medium hover:bg-blue-600 transition-colors"
                 >
-                  💳 View Plans
+                  View Plans
                 </button>
               </div>
             ))}
@@ -254,7 +272,6 @@ const Bills = () => {
                   }}
                 />
                 <div className={`w-12 h-12 bg-gradient-to-r ${selectedProvider.color} rounded-full items-center justify-center text-xl hidden`}>
-                  {selectedProvider.icon}
                 </div>
                 <h2 className="text-2xl font-bold text-gray-900">{selectedProvider.name} Plans</h2>
               </div>
@@ -273,9 +290,10 @@ const Bills = () => {
                         </div>
                         <button 
                           onClick={() => handlePayBill({...plan, provider: provider.name}, selectedProvider.name)}
-                          className="w-full bg-blue-500 text-white py-2 rounded-lg font-medium hover:bg-blue-600 transition-colors text-sm"
+                          disabled={paymentLoading}
+                          className="w-full bg-blue-500 text-white py-2 rounded-lg font-medium hover:bg-blue-600 transition-colors text-sm disabled:opacity-50"
                         >
-                          💳 Pay Now
+                          {paymentLoading ? 'Processing...' : 'Pay Now'}
                         </button>
                       </div>
                     ))}
@@ -288,7 +306,6 @@ const Bills = () => {
 
         {filteredCategories.length === 0 && (
           <div className="text-center py-12">
-            <div className="text-6xl mb-4">🔍</div>
             <h3 className="text-xl font-semibold text-gray-900 mb-2">No Results Found</h3>
             <p className="text-gray-600">Try adjusting your search or filter criteria</p>
           </div>
@@ -296,16 +313,16 @@ const Bills = () => {
 
         {/* Quick Actions */}
         <div className="mt-12 bg-gradient-to-r from-blue-600 to-green-600 rounded-2xl p-8 text-center text-white">
-          <h2 className="text-3xl font-bold mb-4">💡 Quick Bill Payment</h2>
+          <h2 className="text-3xl font-bold mb-4">Quick Bill Payment</h2>
           <p className="text-xl mb-6 opacity-90">
             Set up auto-pay for your regular bills and never miss a payment
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button className="bg-white text-blue-600 px-6 py-3 rounded-lg font-medium hover:bg-gray-100 transition-colors">
-              🔄 Setup Auto-Pay
+              Setup Auto-Pay
             </button>
             <button className="bg-blue-700 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-800 transition-colors">
-              📱 Download App
+              Download App
             </button>
           </div>
         </div>

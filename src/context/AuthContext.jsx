@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
+import apiService from '../services/api'
 
 const AuthContext = createContext()
 
@@ -15,26 +16,44 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('user')
-    if (savedUser) {
-      setUser(JSON.parse(savedUser))
-    }
-    setLoading(false)
+    checkAuthStatus()
   }, [])
 
-  const login = (userData) => {
-    setUser(userData)
-    localStorage.setItem('user', JSON.stringify(userData))
+  const checkAuthStatus = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      if (token) {
+        const userData = await apiService.getProfile()
+        setUser(userData.user)
+      }
+    } catch (error) {
+      localStorage.removeItem('token')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const login = async (credentials) => {
+    const data = await apiService.login(credentials)
+    setUser(data.user)
+    return data
+  }
+
+  const register = async (userData) => {
+    const data = await apiService.register(userData)
+    setUser(data.user)
+    return data
   }
 
   const logout = () => {
+    apiService.logout()
     setUser(null)
-    localStorage.removeItem('user')
   }
 
   const value = {
     user,
     login,
+    register,
     logout,
     loading
   }

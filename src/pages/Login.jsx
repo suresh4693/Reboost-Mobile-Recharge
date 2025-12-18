@@ -1,18 +1,27 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 
 const Login = () => {
+  const navigate = useNavigate()
+  const { login } = useAuth()
   const [formData, setFormData] = useState({ email: '', password: '' })
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    setLoading(true)
-    setTimeout(() => {
+    try {
+      setLoading(true)
+      setError('')
+      await login(formData)
+      navigate('/')
+    } catch (error) {
+      setError(error.message)
+    } finally {
       setLoading(false)
-      alert('Login successful!')
-    }, 1000)
+    }
   }
 
   const handleChange = (e) => {
@@ -23,38 +32,47 @@ const Login = () => {
     <div className="min-h-screen flex items-center justify-center py-12 px-4">
       <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-md">
         <div className="text-center mb-8">
+          <div className="flex justify-center mb-4">
+            <img 
+              src="https://cdn-icons-png.flaticon.com/128/17793/17793391.png" 
+              alt="ReBoost Logo" 
+              className="w-16 h-16"
+            />
+          </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
           <p className="text-gray-600">Sign in to your ReBoost account</p>
         </div>
 
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+            {error}
+          </div>
+        )}
+        
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">📧</span>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                required
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter your email"
-              />
-            </div>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Enter your email"
+            />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">🔒</span>
               <input
                 type={showPassword ? 'text' : 'password'}
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
                 required
-                className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Enter your password"
               />
               <button
@@ -62,7 +80,7 @@ const Login = () => {
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
-                {showPassword ? '🙈' : '👁️'}
+                {showPassword ? 'Hide' : 'Show'}
               </button>
             </div>
           </div>
@@ -80,7 +98,7 @@ const Login = () => {
             disabled={loading}
             className="w-full bg-blue-500 text-white py-3 rounded-lg font-medium hover:bg-blue-600 transition-colors disabled:opacity-50"
           >
-            {loading ? '⏳ Signing In...' : 'Sign In'}
+            {loading ? 'Signing In...' : 'Sign In'}
           </button>
         </form>
 
